@@ -5,7 +5,16 @@ using System.Text;
 
 namespace RemoteTech.CommandHandler
 {
-    interface ICondition
+    public interface ICondition
     {
+        bool IsFulfilled
+        {
+            get;
+        }
+        string providerName
+        {
+            get;
+        }
+        void Save(ConfigNode node);
     }
 }

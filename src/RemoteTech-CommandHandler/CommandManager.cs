@@ -24,6 +24,7 @@ namespace RemoteTech.CommandHandler
         }
 
         private List<PlannedCommand> plannedCommands = new List<PlannedCommand>(initialListSize);
+        private List<PlannedCommand> delayedCommands = new List<PlannedCommand>(initialListSize);
         private bool needToLoad = true;
 
         public void Awake()
@@ -36,12 +37,17 @@ namespace RemoteTech.CommandHandler
             GameEvents.onGameStateLoad.Remove(new EventData<ConfigNode>.OnEvent(GameLoadEvent));
         }
 
-        public bool RegisterCommandProvider(ICommandProvider provider)
+        /// <summary>
+        /// Adds command to the CommandPlanner if capture is on, otherwise queues the command for active vessel
+        /// </summary>
+        /// <param name="command"></param>
+        /// <returns></returns>
+        public bool AddCommand(ICommand command)
         {
             return true;
         }
 
-        public bool AddCommand(ICommand command)
+        public bool AddPlannedCommand(ICommand command, ICondition condition)
         {
             return true;
         }
@@ -61,9 +67,13 @@ namespace RemoteTech.CommandHandler
             needToLoad = false;
         }
 
-        public void GameLoadEvent(ConfigNode node)
+        private void GameLoadEvent(ConfigNode node)
         {
             needToLoad = true;
+        }
+
+        public void FixedUpdate()
+        {
         }
     }
 }

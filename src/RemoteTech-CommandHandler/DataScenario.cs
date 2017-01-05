@@ -6,7 +6,7 @@ using System.Text;
 namespace RemoteTech.CommandHandler
 {
     [KSPScenario(ScenarioCreationOptions.AddToAllGames, GameScenes.FLIGHT, GameScenes.SPACECENTER)]
-    class DataScenario : ScenarioModule
+    class RTCommandHandlerDataScenario : ScenarioModule
     {
         public override void OnLoad(ConfigNode node)
         {

@@ -1,6 +1,6 @@
 ﻿namespace RemoteTech.CommandHandler
 {
-    public interface ICommandProvider
+    public interface IProvider
     {
         string Name
         {
@@ -8,5 +8,6 @@
         }
 
         ICommand LoadCommand(ConfigNode node);
+        ICondition LoadCondition(ConfigNode node);
     }
 }
