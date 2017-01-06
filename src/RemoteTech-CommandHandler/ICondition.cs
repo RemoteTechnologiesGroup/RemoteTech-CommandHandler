@@ -15,6 +15,15 @@ namespace RemoteTech.CommandHandler
         {
             get;
         }
+        string ProviderName
+        {
+            get;
+        }
+        ICondition[] SubConditions
+        {
+            get;
+        }
         void Save(ConfigNode node);
+        void AddSubCondition(ICondition cmd);
     }
 }

@@ -19,10 +19,15 @@
         {
             get;
         }
-        string providerName
+        string ProviderName
+        {
+            get;
+        }
+        ICommand[] SubCommands
         {
             get;
         }
         void Save(ConfigNode node);
+        void AddSubCommand(ICommand cmd);
     }
 }

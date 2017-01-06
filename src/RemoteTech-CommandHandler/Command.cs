@@ -8,7 +8,9 @@ namespace RemoteTech.CommandHandler
     class Command : IConfigNode
     {
         private const string commandNodeName = "Command";
-        private ICommand extCommand;
+
+        public ICommand extCommand;
+
         private Command[] subCommands;
 
         //public Command(){}
@@ -20,7 +22,7 @@ namespace RemoteTech.CommandHandler
 
         public void Save(ConfigNode node)
         {
-            node.AddValue(ProviderManager.providerConfigLabelName, extCommand.providerName);
+            node.AddValue(ProviderManager.providerConfigLabelName, extCommand.ProviderName);
             var extNode = new ConfigNode(ProviderManager.providerDataNodeName);
             extCommand.Save(extNode);
             node.AddNode(extNode);
@@ -38,20 +40,24 @@ namespace RemoteTech.CommandHandler
             ConfigNode extNode = null;
             if (node.TryGetValue(ProviderManager.providerConfigLabelName, ref providerName) && node.TryGetNode(ProviderManager.providerDataNodeName, ref extNode))
             {
-                var provider = ProviderManager.Instance.FindProvider(providerName);
-                if (provider != null)
-                {
-                    extCommand = provider.LoadCommand(extNode);
-                }
-                else
-                {
-                    // log "Unable to find provider with name 'providerName'"
-                }
                 var subnodes = node.GetNodes(commandNodeName);
                 subCommands = new Command[subnodes.Length];
                 for (var i = 0; i < subnodes.Length; i++)
                 {
                     subCommands[i] = new Command(subnodes[i]);
+                }
+                var provider = ProviderManager.Instance.FindProvider(providerName);
+                if (provider != null)
+                {
+                    extCommand = provider.LoadCommand(extNode);
+                    for (var i=0; i<subCommands.Length; i++)
+                    {
+                        extCommand.AddSubCommand(subCommands[i].extCommand);
+                    }
+                }
+                else
+                {
+                    // log "Unable to find provider with name 'providerName'"
                 }
             }
             else
