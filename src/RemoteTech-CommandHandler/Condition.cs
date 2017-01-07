@@ -46,7 +46,7 @@ namespace RemoteTech.CommandHandler
                 {
                     subConditions[i] = new Condition(subnodes[i]);
                 }
-                var provider = ProviderManager.Instance.FindProvider(providerName);
+                var provider = ProviderManager.FindProvider(providerName);
                 if (provider != null)
                 {
                     extCondition = provider.LoadCondition(extNode);

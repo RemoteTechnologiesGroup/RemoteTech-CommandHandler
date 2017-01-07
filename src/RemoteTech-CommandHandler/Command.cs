@@ -5,55 +5,44 @@ using System.Text;
 
 namespace RemoteTech.CommandHandler
 {
-    class Command : IConfigNode
+    class Command
     {
-        private const string commandNodeName = "Command";
+        public const string commandNodeName = "Command";
 
-        public ICommand extCommand;
-
-        private Command[] subCommands;
-
-        //public Command(){}
-
-        public Command(ConfigNode node)
+        public static void Save(ICommand cmd, ConfigNode node)
         {
-            Load(node);
-        }
-
-        public void Save(ConfigNode node)
-        {
-            node.AddValue(ProviderManager.providerConfigLabelName, extCommand.ProviderName);
-            var extNode = new ConfigNode(ProviderManager.providerDataNodeName);
-            extCommand.Save(extNode);
-            node.AddNode(extNode);
-            for(var i = 0; i < subCommands.Length; i++)
+            node.AddValue(ProviderManager.providerConfigLabelName, cmd.ProviderName);
+            var extNode = node.AddNode(ProviderManager.providerDataNodeName);
+            cmd.Save(extNode);
+            var subcmd = cmd.SubCommands;
+            for(var i = 0; i < subcmd.Length; i++)
             {
-                extNode = new ConfigNode(commandNodeName);
-                subCommands[i].Save(extNode);
-                node.AddNode(extNode);
+                extNode = node.AddNode(commandNodeName);
+                subcmd[i].Save(extNode);
             }
         }
 
-        public void Load(ConfigNode node)
+        public static ICommand Load(ConfigNode node)
         {
             string providerName = string.Empty;
             ConfigNode extNode = null;
             if (node.TryGetValue(ProviderManager.providerConfigLabelName, ref providerName) && node.TryGetNode(ProviderManager.providerDataNodeName, ref extNode))
             {
                 var subnodes = node.GetNodes(commandNodeName);
-                subCommands = new Command[subnodes.Length];
+                var subcmd = new ICommand[subnodes.Length];
                 for (var i = 0; i < subnodes.Length; i++)
                 {
-                    subCommands[i] = new Command(subnodes[i]);
+                    subcmd[i] = Load(subnodes[i]);
                 }
-                var provider = ProviderManager.Instance.FindProvider(providerName);
+                var provider = ProviderManager.FindProvider(providerName);
                 if (provider != null)
                 {
-                    extCommand = provider.LoadCommand(extNode);
-                    for (var i=0; i<subCommands.Length; i++)
+                    var cmd = provider.LoadCommand(extNode);
+                    for (var i=0; i<subcmd.Length; i++)
                     {
-                        extCommand.AddSubCommand(subCommands[i].extCommand);
+                        cmd.AddSubCommand(subcmd[i]);
                     }
+                    return cmd;
                 }
                 else
                 {
@@ -70,7 +59,9 @@ namespace RemoteTech.CommandHandler
                 {
                     // log "Unable to get provider data from config node"
                 }
+
             }
+            return null;
         }
     }
 }

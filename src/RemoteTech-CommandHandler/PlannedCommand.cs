@@ -9,8 +9,8 @@ namespace RemoteTech.CommandHandler
     {
         public const string configNodeName = "PlannedCommand";
 
-        public readonly Command command;
-        public readonly Condition condition;
+        public readonly ICommand command;
+        public readonly ICondition condition;
         public readonly Guid vesselId;
 
         public PlannedCommand(ConfigNode node)
@@ -18,7 +18,7 @@ namespace RemoteTech.CommandHandler
 
         }
 
-        public PlannedCommand(Command cmd, Condition cond, Guid vesselGuid)
+        public PlannedCommand(ICommand cmd, ICondition cond, Guid vesselGuid)
         {
             command = cmd;
             condition = cond;
@@ -27,7 +27,9 @@ namespace RemoteTech.CommandHandler
 
         public void Save(ConfigNode node)
         {
-            node.AddNode("");
+            var cmdNode = node.AddNode(Command.commandNodeName);
+            Command.Save(command, cmdNode);
+            //var condNode = node.AddNode(Condition.conditionNodeName);
         }
     }
 }

@@ -12,19 +12,21 @@ namespace RemoteTech.CommandHandler
         public const string providerConfigLabelName = "provider";
         public const string providerDataNodeName = "providerData";
 
-        public static ProviderManager Instance
+        private static Dictionary<String, IProvider> providers;
+
+        public static bool RegisterProvider(string name,IProvider provider)
         {
-            get;
-            private set;
+            if (!providers.ContainsKey(name))
+            {
+                providers.Add(name, provider);
+                return true;
+            }
+            return false;
         }
 
-        public bool RegisterProvider(IProvider provider)
+        public static IProvider FindProvider(string name)
         {
-            return true;
-        }
-        public IProvider FindProvider(string name)
-        {
-            return null;
+            return providers[name];
         }
     }
 }
