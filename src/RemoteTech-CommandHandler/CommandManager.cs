@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+//using System.Linq;
 using System.Text;
 using UnityEngine;
 
@@ -10,22 +10,37 @@ namespace RemoteTech.CommandHandler
     public class CommandManager : MonoBehaviour
     {
         public const string configNodeName = "CommandManager";
+        public const string plannedCommandsNodeName = "PlannedCommands";
+        public const string plannedCommandsVesselNodeName = "Vessel";
+        public const string plannedCommandsVesselGuidName = "VesselGuid";
+        public const string plannedCommandNodeName = "PlannedCommand";
+        public const string delayedCommandsNodeName = "DelayedCommands";
+        public const string delayedCommandNodeName = "DelayedCommand";
 
-        private const int initialListSize = 50;
-
-        private static CommandManager instance;
+        private const int initialListSize = 10;
 
         public static CommandManager Instance
         {
-            get
-            {
-                return instance;
-            }
+            get;
+            private set;
         }
 
-        private List<PlannedCommand> plannedCommands = new List<PlannedCommand>(initialListSize);
-        private List<PlannedCommand> delayedCommands = new List<PlannedCommand>(initialListSize);
+        private Dictionary<Vessel, List<PlannedCommand>> plannedCommands = new Dictionary<Vessel, List<PlannedCommand>>(initialListSize);
+        private List<DelayedCommand> delayedCommands = new List<DelayedCommand>(initialListSize);
+        private static List<Guid> usedCommandGuids = new List<Guid>(initialListSize);
+        private static List<Guid> issuedCommandGuids = new List<Guid>(initialListSize);
         private bool needToLoad = true;
+
+        public Guid NewCommandId()
+        {
+            var id = Guid.NewGuid();
+            while (usedCommandGuids.Contains(id) || issuedCommandGuids.Contains(id))
+            {
+                id = Guid.NewGuid();
+            }
+            issuedCommandGuids.Add(id);
+            return id;
+        }
 
         public void Awake()
         {
@@ -42,27 +57,69 @@ namespace RemoteTech.CommandHandler
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        public bool AddCommand(ICommand command)
+        public void AddCommand(ICommand command)
         {
-            return true;
+            // check if CommandPlanner has "capture" enabled, if on, pass to planner, else
+            // check active vessel, if none, drop the command, otherwise PlanCommand for active vessel with no condition
         }
 
-        public bool AddPlannedCommand(ICommand command, ICondition condition)
+        public void PlanCommand(ICommand command, ICondition condition, bool enabled, Vessel fromVessel, Vessel toVessel)
         {
-            return true;
+            PlanCommand(new PlannedCommand(command, condition, enabled), fromVessel, toVessel);
+        }
+
+        public void PlanCommand(PlannedCommand planCommand, Vessel fromVessel, Vessel toVessel)
+        {
+            // if fromVessel is null, it's Home
+            // if toVessel is null, it's active vessel
+            if (toVessel == null)
+            {
+                if (FlightGlobals.ActiveVessel != null)
+                {
+                    toVessel = FlightGlobals.ActiveVessel;
+                }
+                else
+                {
+                    // log cannot determine target vessel for planned command
+                    return;
+                }
+            }
+            delayedCommands.Add(new DelayedCommand(planCommand, fromVessel, toVessel));
+            if (issuedCommandGuids.Contains(planCommand.id))
+            {
+                issuedCommandGuids.Remove(planCommand.id);
+            }
+            usedCommandGuids.Add(planCommand.id);
         }
 
         public void LoadFromConfigNode(ConfigNode node)
         {
-            if ( !needToLoad || !node.HasNode(PlannedCommand.configNodeName))
-            {
-                return;
-            }
+            if (!needToLoad) return;
+            if (!node.HasNode(plannedCommandsNodeName)) return;
+            if (!node.HasNode(delayedCommandsNodeName)) return;
+            // log before returning
+
             plannedCommands.Clear();
-            var nodes = node.GetNodes(PlannedCommand.configNodeName);
+            var nodes = node.GetNode(plannedCommandsNodeName).GetNodes(plannedCommandsVesselNodeName);
+            for (var i = 0; i < nodes.Length; i++)
+            {
+                if (nodes[i].HasValue(plannedCommandsVesselGuidName))
+                {
+                    var list = new List<PlannedCommand>(initialListSize);
+                    plannedCommands.Add(FlightGlobals.FindVessel(new Guid(nodes[i].GetValue(plannedCommandsVesselGuidName))), list);
+                    var commands = nodes[i].GetNodes(plannedCommandNodeName);
+                    for (var j= 0; j < commands.Length; j++)
+                    {
+                        list.Add(new PlannedCommand(commands[j]));
+                    }
+                }
+            }
+
+            delayedCommands.Clear();
+            nodes = node.GetNode(delayedCommandsNodeName).GetNodes(delayedCommandNodeName);
             for (var i=0; i < nodes.Length; i++)
             {
-                plannedCommands.Add(new PlannedCommand(nodes[i]));
+                delayedCommands.Add(new DelayedCommand(nodes[i]));
             }
             needToLoad = false;
         }

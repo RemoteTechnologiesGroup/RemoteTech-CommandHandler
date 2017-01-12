@@ -50,11 +50,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Command.cs" />
     <Compile Include="CommandManager.cs" />
     <Compile Include="CommandPlanner.cs" />
-    <Compile Include="Condition.cs" />
     <Compile Include="DataScenario.cs" />
+    <Compile Include="DelayedCommand.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="IProvider.cs" />
     <Compile Include="ICondition.cs" />

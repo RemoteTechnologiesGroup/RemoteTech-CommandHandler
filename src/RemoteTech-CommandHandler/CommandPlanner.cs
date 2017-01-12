@@ -7,9 +7,17 @@ namespace RemoteTech.CommandHandler
 {
     class CommandPlanner //: MonoBehaviour
     {
+        public static CommandPlanner Instance
+        {
+            get;
+            private set;
+        }
+
+        public bool capture = false;
+
         public void LoadFromConfigNode(ConfigNode node)
         {
-
+            
         }
     }
 }
