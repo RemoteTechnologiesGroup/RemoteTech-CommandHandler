@@ -57,15 +57,15 @@ namespace RemoteTech.CommandHandler
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        public void AddCommand(ICommand command)
+        public void AddCommand(IAction command)
         {
             // check if CommandPlanner has "capture" enabled, if on, pass to planner, else
             // check active vessel, if none, drop the command, otherwise PlanCommand for active vessel with no condition
         }
 
-        public void PlanCommand(ICommand command, ICondition condition, bool enabled, Vessel fromVessel, Vessel toVessel)
+        public void PlanCommand(IAction command, ICondition condition, bool enabled, bool oneShot, Vessel fromVessel, Vessel toVessel)
         {
-            PlanCommand(new PlannedCommand(command, condition, enabled), fromVessel, toVessel);
+            PlanCommand(new PlannedCommand(command, condition, enabled, oneShot), fromVessel, toVessel);
         }
 
         public void PlanCommand(PlannedCommand planCommand, Vessel fromVessel, Vessel toVessel)
@@ -108,7 +108,7 @@ namespace RemoteTech.CommandHandler
                     var list = new List<PlannedCommand>(initialListSize);
                     plannedCommands.Add(FlightGlobals.FindVessel(new Guid(nodes[i].GetValue(plannedCommandsVesselGuidName))), list);
                     var commands = nodes[i].GetNodes(plannedCommandNodeName);
-                    for (var j= 0; j < commands.Length; j++)
+                    for (var j = 0; j < commands.Length; j++)
                     {
                         list.Add(new PlannedCommand(commands[j]));
                     }
@@ -117,7 +117,7 @@ namespace RemoteTech.CommandHandler
 
             delayedCommands.Clear();
             nodes = node.GetNode(delayedCommandsNodeName).GetNodes(delayedCommandNodeName);
-            for (var i=0; i < nodes.Length; i++)
+            for (var i = 0; i < nodes.Length; i++)
             {
                 delayedCommands.Add(new DelayedCommand(nodes[i]));
             }
@@ -131,6 +131,53 @@ namespace RemoteTech.CommandHandler
 
         public void FixedUpdate()
         {
+            CheckDelayedCommands();
+            CheckPlannedCommands();
+        }
+
+        private void CheckPlannedCommands()
+        {
+            if (FlightGlobals.ActiveVessel != null)
+            {
+                var list = plannedCommands[FlightGlobals.ActiveVessel];
+                for (var i = list.Count - 1; i >= 0; i--)
+                {
+                    if (list[i].Enabled && list[i].condition.IsFulfilled && list[i].action.IsReady)
+                    {
+                        list[i].action.Activate();
+                    }
+                    if (list[i].action.HasFinished)
+                    {
+                        if (!list[i].action.HasFailed)
+                        {
+                            if (list[i].OneShot)
+                            {
+                                list.RemoveAt(i);
+                            }
+                            else
+                            {
+                                list[i].Enabled = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CheckDelayedCommands()
+        {
+            for (var i = delayedCommands.Count - 1; i >= 0; i--)
+            {
+                if (delayedCommands[i].Delivered)
+                {
+                    if (plannedCommands[delayedCommands[i].toVessel] == null)
+                    {
+                        plannedCommands.Add(delayedCommands[i].toVessel, new List<PlannedCommand>(initialListSize));
+                    }
+                    plannedCommands[delayedCommands[i].toVessel].Add(delayedCommands[i].command);
+                    delayedCommands.RemoveAt(i);
+                }
+            }
         }
     }
 }

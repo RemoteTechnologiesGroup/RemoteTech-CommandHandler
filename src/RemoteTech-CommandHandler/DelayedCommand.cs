@@ -13,16 +13,24 @@ namespace RemoteTech.CommandHandler
         public const string sentUTLabel = "SentUT";
 
         public readonly PlannedCommand command;
+        public readonly Vessel fromVessel;
+        public readonly Vessel toVessel;
 
-        private Vessel fromVessel;
-        private Vessel toVessel;
         private double sentUT;
         private double receiveUT;
+
+        public bool Delivered
+        {
+            get
+            {
+                return Planetarium.GetUniversalTime() >= receiveUT;
+            }
+        }
 
         public DelayedCommand(PlannedCommand cmd, Vessel from, Vessel to)
         {
             //if (toVessel == null) return;
-            
+
             // if from vessel is null, it's Home
             command = cmd;
             fromVessel = from;
@@ -60,11 +68,6 @@ namespace RemoteTech.CommandHandler
             {
                 // log error parsing sentUT from config node
             }
-        }
-
-        public bool isDelivered()
-        {
-            return Planetarium.GetUniversalTime() >= receiveUT;
         }
     }
 }

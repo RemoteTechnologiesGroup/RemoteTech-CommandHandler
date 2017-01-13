@@ -2,7 +2,7 @@
 {
     public interface IProvider
     {
-        ICommand LoadCommand(ConfigNode node);
+        IAction LoadAction(ConfigNode node);
         ICondition LoadCondition(ConfigNode node);
     }
 }

@@ -1,8 +1,8 @@
 ﻿namespace RemoteTech.CommandHandler
 {
-    public interface ICommand
+    public interface IAction
     {
-        void Run();
+        void Activate();
         bool IsReady
         {
             get;
@@ -23,11 +23,11 @@
         {
             get;
         }
-        ICommand[] SubCommands
+        IAction[] SubCommands
         {
             get;
         }
         void Save(ConfigNode node);
-        void AddSubCommand(ICommand cmd);
+        void AddSubAction(IAction cmd);
     }
 }

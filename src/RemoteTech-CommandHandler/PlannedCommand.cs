@@ -8,42 +8,52 @@ namespace RemoteTech.CommandHandler
     public class PlannedCommand
     {
         public const string configNodeName = "PlannedCommand";
-        public const string commandNodeName = "Command";
+        public const string actionNodeName = "Action";
         public const string conditionNodeName = "Condition";
         public const string idKeyName = "id";
         public const string enabledKeyName = "enabled";
+        public const string oneShotKeyName = "oneShot";
 
-        public readonly ICommand command;
+        public readonly IAction action;
         public readonly ICondition condition;
         public readonly Guid id;
 
         public bool Enabled
         {
             get;
-            private set;
+            set;
+        }
+
+        public bool OneShot
+        {
+            get;
+            set;
         }
 
         public PlannedCommand(ConfigNode node)
         {
             string idVal = string.Empty;
             string enVal = string.Empty;
+            string osVal = string.Empty;
             ConfigNode cmdNode = null;
             ConfigNode condNode = null;
             if (node.TryGetValue(idKeyName, ref idVal) &&
                 node.TryGetValue(enabledKeyName, ref enVal) &&
-                node.TryGetNode(commandNodeName, ref cmdNode) &&
+                node.TryGetValue(oneShotKeyName, ref osVal) &&
+                node.TryGetNode(actionNodeName, ref cmdNode) &&
                 node.TryGetNode(conditionNodeName, ref condNode))
             {
                 try
                 {
                     id = new Guid(idVal);
                     Enabled = bool.Parse(enVal);
+                    OneShot = bool.Parse(osVal);
                 }
                 catch (Exception ex)
                 {
                     // log ex.ToString();
                 }
-                command = LoadCommand(cmdNode);
+                action = LoadAction(cmdNode);
                 condition = LoadCondition(condNode);
             }
             else
@@ -59,76 +69,81 @@ namespace RemoteTech.CommandHandler
             }
         }
 
-        public PlannedCommand(ICommand cmd, ICondition cond, bool enabled)
+        public PlannedCommand(IAction act, ICondition cond, bool enabled, bool oneShot)
         {
-            command = cmd;
+            action = act;
             condition = cond;
             id = CommandManager.Instance.NewCommandId();
             Enabled = enabled;
+            OneShot = oneShot;
         }
 
-        public void Enable()
-        {
-            Enabled = true;
-        }
+        //public void Enable()
+        //{
+        //    Enabled = true;
+        //}
 
-        public void Disable()
-        {
-            Enabled = false;
-        }
+        //public void Disable()
+        //{
+        //    Enabled = false;
+        //}
 
-        public void ToggleEnabled()
-        {
-            Enabled = !Enabled;
-        }
+        //public void ToggleEnabled()
+        //{
+        //    Enabled = !Enabled;
+        //}
 
         public void Save(ConfigNode node)
         {
+            // save values
+            node.AddValue(idKeyName, id.ToString());
+            node.AddValue(enabledKeyName, Enabled);
+            node.AddValue(oneShotKeyName, OneShot);
             // save command
-            var subNode = node.AddNode(commandNodeName);
-            subNode.AddValue(ProviderManager.providerConfigLabelName, command.ProviderName);
+            var subNode = node.AddNode(actionNodeName);
+            subNode.AddValue(ProviderManager.providerConfigLabelName, action.ProviderName);
             subNode = subNode.AddNode(ProviderManager.providerDataNodeName);
-            command.Save(subNode);
-            var subCmd = command.SubCommands;
+            action.Save(subNode);
+            var subCmd = action.SubCommands;
             for (var i = 0; i < subCmd.Length; i++)
             {
-                subNode = node.AddNode(commandNodeName);
+                subNode = node.AddNode(actionNodeName);
                 subCmd[i].Save(subNode);
             }
             // save condition
             subNode = node.AddNode(conditionNodeName);
-            subNode.AddValue(ProviderManager.providerConfigLabelName, command.ProviderName);
+            subNode.AddValue(ProviderManager.providerConfigLabelName, action.ProviderName);
             subNode = subNode.AddNode(ProviderManager.providerDataNodeName);
             condition.Save(subNode);
             var subCond = condition.SubConditions;
             for (var i = 0; i < subCond.Length; i++)
             {
-                subNode = node.AddNode(commandNodeName);
+                subNode = node.AddNode(actionNodeName);
                 subCond[i].Save(subNode);
             }
         }
 
-        private ICommand LoadCommand(ConfigNode node)
+        private IAction LoadAction(ConfigNode node)
         {
             string providerName = string.Empty;
             ConfigNode extNode = null;
             if (node.TryGetValue(ProviderManager.providerConfigLabelName, ref providerName) && node.TryGetNode(ProviderManager.providerDataNodeName, ref extNode))
             {
-                var subnodes = node.GetNodes(commandNodeName);
-                var subcmd = new ICommand[subnodes.Length];
+                var subnodes = node.GetNodes(actionNodeName);
+                var subact = new IAction[subnodes.Length];
                 for (var i = 0; i < subnodes.Length; i++)
                 {
-                    subcmd[i] = LoadCommand(subnodes[i]);
+                    subact[i] = LoadAction(subnodes[i]);
                 }
                 var provider = ProviderManager.FindProvider(providerName);
                 if (provider != null)
                 {
-                    var cmd = provider.LoadCommand(extNode);
-                    for (var i = 0; i < subcmd.Length; i++)
+                    var act = provider.LoadAction(extNode);
+                    for (var i = 0; i < subact.Length; i++)
                     {
-                        cmd.AddSubCommand(subcmd[i]);
+                        act.AddSubAction(subact[i]);
                     }
-                    return cmd;
+                    return act;
                 }
                 else
                 {
@@ -155,7 +170,7 @@ namespace RemoteTech.CommandHandler
             ConfigNode extNode = null;
             if (node.TryGetValue(ProviderManager.providerConfigLabelName, ref providerName) && node.TryGetNode(ProviderManager.providerDataNodeName, ref extNode))
             {
-                var subnodes = node.GetNodes(commandNodeName);
+                var subnodes = node.GetNodes(actionNodeName);
                 var subCond = new ICondition[subnodes.Length];
                 for (var i = 0; i < subnodes.Length; i++)
                 {
