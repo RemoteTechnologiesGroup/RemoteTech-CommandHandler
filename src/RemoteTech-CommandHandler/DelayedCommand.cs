@@ -7,10 +7,11 @@ namespace RemoteTech.CommandHandler
 {
     class DelayedCommand
     {
-        public const string commandNodeName = "PlannedCommand";
-        public const string fromVesselLabel = "FromVessel";
-        public const string toVesselLabel = "ToVessel";
-        public const string sentUTLabel = "SentUT";
+        private const string commandNodeName = "PlannedCommand";
+        private const string fromVesselLabel = "FromVessel";
+        private const string toVesselLabel = "ToVessel";
+        private const string sentUTLabel = "SentUT";
+        private const string guidFromat = "N";
 
         public readonly PlannedCommand command;
         public readonly Vessel fromVessel;
@@ -61,13 +62,21 @@ namespace RemoteTech.CommandHandler
             if (!node.HasNode(commandNodeName)) return;
             // log before returning
 
-            command = new PlannedCommand(node.GetNode(commandNodeName));
+            command = PlannedCommand.Load(node.GetNode(commandNodeName));
             fromVessel = FlightGlobals.FindVessel(new Guid(node.GetValue(fromVesselLabel)));
             toVessel = FlightGlobals.FindVessel(new Guid(node.GetValue(toVesselLabel)));
             if (!double.TryParse(node.GetValue(sentUTLabel), out sentUT))
             {
                 // log error parsing sentUT from config node
             }
+        }
+
+        public void Save(ConfigNode node)
+        {
+            node.AddValue(fromVesselLabel, fromVessel.id.ToString(guidFromat));
+            node.AddValue(toVesselLabel, toVessel.id.ToString(guidFromat));
+            node.AddValue(sentUTLabel, sentUT);
+            command.Save(node.AddNode(commandNodeName));
         }
     }
 }

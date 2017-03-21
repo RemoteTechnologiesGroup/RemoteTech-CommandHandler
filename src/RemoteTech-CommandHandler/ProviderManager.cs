@@ -1,32 +1,118 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace RemoteTech.CommandHandler
 {
-    [KSPAddon(KSPAddon.Startup.MainMenu, true)]
-    class ProviderManager : MonoBehaviour
+    [KSPAddon(KSPAddon.Startup.Instantly, true)]
+    public class ProviderManager : MonoBehaviour
     {
-        public const string providerConfigLabelName = "provider";
-        public const string providerDataNodeName = "providerData";
+        private const int initListSize = 1;
+        private const int initDictSize = 10;
 
-        private static Dictionary<String, IProvider> providers;
+        private static Dictionary<string, Type> Tasks = new Dictionary<string, Type>(initDictSize);
+        private static Dictionary<string, Type> Conditions = new Dictionary<string, Type>(initDictSize);
+        private static List<Provider> Providers = new List<Provider>(initListSize);
 
-        public static bool RegisterProvider(string name,IProvider provider)
+        private void Awake()
         {
-            if (!providers.ContainsKey(name))
+            Debug.Log("[ProviderManager] Awake()");
+            AssemblyLoader.loadedAssemblies.TypeOperation(delegate (Type t)
             {
-                providers.Add(name, provider);
-                return true;
+                if (!t.IsAbstract)
+                {
+                    if (t.IsSubclassOf(typeof(Task)) && !t.IsAbstract)
+                    {
+                        Tasks.Add(t.Name, t);
+                    }
+                    if (t.IsSubclassOf(typeof(Condition)) && !t.IsAbstract)
+                    {
+                        Conditions.Add(t.Name, t);
+                    }
+                    if (t.IsSubclassOf(typeof(Provider)) && !t.IsAbstract)
+                    {
+                        Providers.Add((Provider)Activator.CreateInstance(t));
+                    }
+                }
+            });
+            var list = new List<string>();
+            foreach (var provider in Providers)
+            {
+                list.Add(provider.GetType().Name);
             }
-            return false;
+            Debug.Log("[ProviderManager] Found Providers: " + string.Join(", ", list.ToArray()));
+            Debug.Log("[ProviderManager] Found Tasks: " + string.Join(", ", (new List<string>(Tasks.Keys)).ToArray()));
+            Debug.Log("[ProviderManager] Found Conditions: " + string.Join(", ", (new List<string>(Conditions.Keys)).ToArray()));
         }
 
-        public static IProvider FindProvider(string name)
+        public static Type GetTaskType(string name)
         {
-            return providers[name];
+            return Tasks[name];
+        }
+
+        public static Type GetConditionType(string name)
+        {
+            return Conditions[name];
+        }
+
+        public static List<Type> ValidTasksFor(Part part)
+        {
+            return ValidTasksFor(part, null);
+        }
+
+        public static List<Type> ValidTasksFor(Part part, List<Type> list)
+        {
+            if (list == null)
+            {
+                list = new List<Type>();
+            }
+            else
+            {
+                list.Clear();
+            }
+            var tmpList = new List<Type>();
+            foreach (var provider in Providers)
+            {
+                list.AddRange(provider.GetTasks(part, tmpList));
+            }
+            for (var i = list.Count - 1; i >= 0; i--)
+            {
+                if (Tasks[list[i].Name] == null)
+                {
+                    list.RemoveAt(i);
+                }
+            }
+            return list;
+        }
+
+        public static List<Type> ValidConditionsFor(Part part)
+        {
+            return ValidConditionsFor(part, null);
+        }
+
+        public static List<Type> ValidConditionsFor(Part part, List<Type> list)
+        {
+            if (list == null)
+            {
+                list = new List<Type>();
+            }
+            else
+            {
+                list.Clear();
+            }
+            var tmpList = new List<Type>();
+            foreach (var provider in Providers)
+            {
+                list.AddRange(provider.GetConditions(part, tmpList));
+            }
+            for (var i = list.Count - 1; i >= 0; i--)
+            {
+                if (Conditions[list[i].Name] == null)
+                {
+                    list.RemoveAt(i);
+                }
+            }
+            return list;
         }
     }
 }

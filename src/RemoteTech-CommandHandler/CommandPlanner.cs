@@ -15,9 +15,6 @@ namespace RemoteTech.CommandHandler
 
         public bool capture = false;
 
-        public void LoadFromConfigNode(ConfigNode node)
-        {
-            
-        }
+        
     }
 }

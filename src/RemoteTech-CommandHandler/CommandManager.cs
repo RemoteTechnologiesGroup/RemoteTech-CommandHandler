@@ -9,13 +9,10 @@ namespace RemoteTech.CommandHandler
     [KSPAddon(KSPAddon.Startup.MainMenu, true)]
     public class CommandManager : MonoBehaviour
     {
-        public const string configNodeName = "CommandManager";
-        public const string plannedCommandsNodeName = "PlannedCommands";
-        public const string plannedCommandsVesselNodeName = "Vessel";
-        public const string plannedCommandsVesselGuidName = "VesselGuid";
-        public const string plannedCommandNodeName = "PlannedCommand";
-        public const string delayedCommandsNodeName = "DelayedCommands";
-        public const string delayedCommandNodeName = "DelayedCommand";
+        private const string plannedCommandsVesselNodeName = "VesselCommands";
+        private const string plannedCommandsVesselGuidName = "VesselGuid";
+        private const string plannedCommandNodeName = "PlannedCommand";
+        private const string delayedCommandNodeName = "DelayedCommand";
 
         private const int initialListSize = 10;
 
@@ -57,13 +54,13 @@ namespace RemoteTech.CommandHandler
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        public void AddCommand(IAction command)
+        public void AddTaskAsCommand(Task task)
         {
             // check if CommandPlanner has "capture" enabled, if on, pass to planner, else
             // check active vessel, if none, drop the command, otherwise PlanCommand for active vessel with no condition
         }
 
-        public void PlanCommand(IAction command, ICondition condition, bool enabled, bool oneShot, Vessel fromVessel, Vessel toVessel)
+        public void PlanCommand(Task command, Condition condition, bool enabled, bool oneShot, Vessel fromVessel, Vessel toVessel)
         {
             PlanCommand(new PlannedCommand(command, condition, enabled, oneShot), fromVessel, toVessel);
         }
@@ -85,22 +82,20 @@ namespace RemoteTech.CommandHandler
                 }
             }
             delayedCommands.Add(new DelayedCommand(planCommand, fromVessel, toVessel));
-            if (issuedCommandGuids.Contains(planCommand.id))
+            if (issuedCommandGuids.Contains(planCommand.Id))
             {
-                issuedCommandGuids.Remove(planCommand.id);
+                issuedCommandGuids.Remove(planCommand.Id);
             }
-            usedCommandGuids.Add(planCommand.id);
+            usedCommandGuids.Add(planCommand.Id);
         }
 
-        public void LoadFromConfigNode(ConfigNode node)
+        public void Load(ConfigNode node)
         {
             if (!needToLoad) return;
-            if (!node.HasNode(plannedCommandsNodeName)) return;
-            if (!node.HasNode(delayedCommandsNodeName)) return;
             // log before returning
 
             plannedCommands.Clear();
-            var nodes = node.GetNode(plannedCommandsNodeName).GetNodes(plannedCommandsVesselNodeName);
+            var nodes = node.GetNodes(plannedCommandsVesselNodeName);
             for (var i = 0; i < nodes.Length; i++)
             {
                 if (nodes[i].HasValue(plannedCommandsVesselGuidName))
@@ -110,18 +105,35 @@ namespace RemoteTech.CommandHandler
                     var commands = nodes[i].GetNodes(plannedCommandNodeName);
                     for (var j = 0; j < commands.Length; j++)
                     {
-                        list.Add(new PlannedCommand(commands[j]));
+                        list.Add(PlannedCommand.Load(commands[j]));
                     }
                 }
             }
 
             delayedCommands.Clear();
-            nodes = node.GetNode(delayedCommandsNodeName).GetNodes(delayedCommandNodeName);
+            nodes = node.GetNodes(delayedCommandNodeName);
             for (var i = 0; i < nodes.Length; i++)
             {
                 delayedCommands.Add(new DelayedCommand(nodes[i]));
             }
             needToLoad = false;
+        }
+
+        public void Save(ConfigNode node)
+        {
+            var vessels = new List<Vessel>(plannedCommands.Keys);
+            for (var i = 0; i < vessels.Count; i++)
+            {
+                var vesselNode = node.AddNode(plannedCommandsVesselNodeName);
+                for (var j = 0; j < plannedCommands[vessels[i]].Count; j++)
+                {
+                    plannedCommands[vessels[i]][j].Save(vesselNode.AddNode(plannedCommandNodeName));
+                }
+            }
+            for (var i = 0; i < delayedCommands.Count; i++)
+            {
+                delayedCommands[i].Save(node.AddNode(delayedCommandNodeName));
+            }
         }
 
         private void GameLoadEvent(ConfigNode node)
@@ -131,8 +143,11 @@ namespace RemoteTech.CommandHandler
 
         public void FixedUpdate()
         {
-            CheckDelayedCommands();
-            CheckPlannedCommands();
+            if (HighLogic.LoadedScene > GameScenes.CREDITS)
+            {
+                CheckDelayedCommands();
+                CheckPlannedCommands();
+            }
         }
 
         private void CheckPlannedCommands()
@@ -142,13 +157,13 @@ namespace RemoteTech.CommandHandler
                 var list = plannedCommands[FlightGlobals.ActiveVessel];
                 for (var i = list.Count - 1; i >= 0; i--)
                 {
-                    if (list[i].Enabled && list[i].condition.IsFulfilled && list[i].action.IsReady)
+                    if (list[i].Enabled && (list[i].Condition == null || list[i].Condition.IsFulfilled) && list[i].Task.State == Task.TaskState.Ready)
                     {
-                        list[i].action.Activate();
+                        list[i].Task.Activate();
                     }
-                    if (list[i].action.HasFinished)
+                    if (list[i].Task.State >= Task.TaskState.Finished)
                     {
-                        if (!list[i].action.HasFailed)
+                        if (list[i].Task.State != Task.TaskState.Failed)
                         {
                             if (list[i].OneShot)
                             {
@@ -158,6 +173,10 @@ namespace RemoteTech.CommandHandler
                             {
                                 list[i].Enabled = false;
                             }
+                        }
+                        else
+                        {
+                            // what to do with a failed task?
                         }
                     }
                 }
