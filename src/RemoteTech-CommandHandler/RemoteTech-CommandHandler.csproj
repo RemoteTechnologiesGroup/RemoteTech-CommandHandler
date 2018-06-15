@@ -50,6 +50,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="RemoteTechCmdHandlerParams.cs" />
     <Compile Include="Task.cs" />
     <Compile Include="CommandManager.cs" />
     <Compile Include="CommandPlanner.cs" />

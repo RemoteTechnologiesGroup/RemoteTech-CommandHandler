@@ -82,7 +82,7 @@ namespace RemoteTech.CommandHandler
                     var id = new Guid(idVal);
                     var enabled = bool.Parse(enVal);
                     var oneShot = bool.Parse(osVal);
-                    return new PlannedCommand(Task.LoadFrom(taskNode), Condition.Load(condNode), id, enabled, oneShot);
+                    return new PlannedCommand(Task.LoadFrom(taskNode), Condition.LoadFrom(condNode), id, enabled, oneShot);
                 }
                 catch (Exception ex)
                 {
