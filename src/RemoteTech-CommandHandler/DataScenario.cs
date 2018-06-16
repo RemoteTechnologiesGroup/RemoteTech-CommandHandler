@@ -13,6 +13,7 @@ namespace RemoteTech.CommandHandler
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
+            return;//temp
             if (node.HasNode(commandManagerNodeName))
             {
                 CommandManager.Instance.Load(node.GetNode(commandManagerNodeName));
@@ -27,6 +28,7 @@ namespace RemoteTech.CommandHandler
         public override void OnSave(ConfigNode node)
         {
             base.OnSave(node);
+            return;//temp
             CommandManager.Instance.Save(node.AddNode(commandManagerNodeName));
         }
     }

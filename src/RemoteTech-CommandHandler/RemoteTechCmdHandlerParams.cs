@@ -7,6 +7,9 @@ namespace RemoteTech.CommandHandler
 {
     public class RemoteTechCmdHandlerParams : GameParameters.CustomParameterNode
     {
+        [GameParameters.CustomStringParameterUI("", autoPersistance = false, lines = 3)]
+        public string description = "To uninstall Command Manager, delete 'RemoteTech-CommandHandler' from RemoteTech's main folder";
+        
         [GameParameters.CustomParameterUI("Add Alarms to Kerbal Alarm Clock", toolTip = "ON: The flight computer will automatically add alarms to the Kerbal Alarm Clock mod for burn and maneuver commands.\nThe alarm goes off 3 minutes before the command executes.\nOFF: No alarms are added to Kerbal Alarm Clock")]
         public bool AutoInsertKaCAlerts = true;
 
